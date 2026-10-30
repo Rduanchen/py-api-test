@@ -1,0 +1,22 @@
+=== Test Summary ===
+Test ID,test-unit-01
+Target URL,http://127.0.0.1:3001
+Mode,pure
+Exam ID,exam1
+Start Time,2026-10-25 20:14:16
+End Time,2026-10-25 20:14:16
+Duration (s),0.0
+Total Workers,2
+Total Requests,250
+Failed Requests,5
+Failure Rate (%),2.0
+Avg RPS,250000.0
+Peak RPS,250000.0
+Avg Latency (ms),26.14
+P50 Latency (ms),25.0
+P95 Latency (ms),38.5
+P99 Latency (ms),39.7
+
+=== Time Series Data ===
+Elapsed (s),Total Requests,RPS,Avg Response Time (ms),P50 (ms),P95 (ms),P99 (ms),Failed Requests,Failure Rate (%),Active Workers,Active VUs,Socket.IO Connections
+0.0,250,250000.0,26.14,25.0,38.5,39.7,5,2.0,2,10,10

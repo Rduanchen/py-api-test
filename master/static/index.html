@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed Load Testing Master - 控制中控台</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>🎯 分散式 API 負載與壓力測試中控台 (Master)</h1>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">支援 40+ Slave 分散式負載排程、真實學生登入與 Socket.IO 長連線維護</p>
+            </div>
+            <div>
+                <span id="testStateBadge" class="status-badge idle">狀態: IDLE</span>
+                <span id="wsStatusBadge" class="status-badge online" style="margin-left: 8px;">WS 連線中</span>
+            </div>
+        </header>
+
+        <!-- Section A: Worker Overview -->
+        <div class="grid-cards">
+            <div class="card">
+                <div class="card-title">總機器數 (Total)</div>
+                <div id="statTotalWorkers" class="card-value">0</div>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--success);">
+                <div class="card-title">在線機器 (Online)</div>
+                <div id="statOnlineWorkers" class="card-value" style="color: var(--success);">0</div>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--running);">
+                <div class="card-title">執行中機器 (Running)</div>
+                <div id="statRunningWorkers" class="card-value" style="color: var(--running);">0</div>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--danger);">
+                <div class="card-title">離線機器 (Offline)</div>
+                <div id="statOfflineWorkers" class="card-value" style="color: var(--danger);">0</div>
+            </div>
+        </div>
+
+        <div class="layout-cols">
+            <!-- Section B: Test Configuration -->
+            <div class="card">
+                <h2>⚙️ 測試參數配置 (Test Configuration)</h2>
+                <form id="testConfigForm">
+                    <div class="form-group">
+                        <label for="targetUrl">受測後端 API 網址 (Target API URL)</label>
+                        <input type="text" id="targetUrl" name="targetUrl" value="http://127.0.0.1:3001" required placeholder="例如: http://192.168.1.100:3001">
+                        <small style="color: var(--text-muted);">測試對象為 host 的 User 服務端點 (預設 Port 3001)</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="testMode">測試模式 (Test Mode)</label>
+                            <select id="testMode" name="testMode">
+                                <option value="pure">跳過帳號註冊 (極限高併發 / 虛擬使用者)</option>
+                                <option value="actual">實際測試 (真實學生帳號登入 + 加密 + Socket.io)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="examId">試卷與題目配置 (Exam)</label>
+                            <select id="examId" name="examId">
+                                <option value="exam1">載入中...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="totalUsers">總虛擬使用者數 (Total Users)</label>
+                            <input type="number" id="totalUsers" name="totalUsers" value="20" min="1" max="100000">
+                        </div>
+                        <div class="form-group">
+                            <label for="spawnRate">每秒生成率 (Spawn Rate / sec)</label>
+                            <input type="number" id="spawnRate" name="spawnRate" value="5" min="0.1" step="0.5">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="duration">測試持續時間 (秒)</label>
+                            <input type="number" id="duration" name="duration" value="60" min="5" max="3600">
+                        </div>
+                        <div class="form-group">
+                            <label for="workerSelection">參與 Worker</label>
+                            <select id="workerSelection" name="workerSelection">
+                                <option value="all">所有在線 Worker (All Online)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="button" id="btnStartTest" class="btn-primary">🚀 開始測試 (Start Test)</button>
+                        <button type="button" id="btnStopTest" class="btn-danger" disabled>🛑 停止測試 (Stop Test)</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Section A Table: Connected Slaves Table -->
+            <div class="card" style="overflow-x: auto;">
+                <h2>💻 已註冊 Slave 機器清單 (Worker Registry)</h2>
+                <table id="workersTable">
+                    <thead>
+                        <tr>
+                            <th>Worker ID</th>
+                            <th>IP / 來源</th>
+                            <th>Hostname</th>
+                            <th>狀態</th>
+                            <th>CPU</th>
+                            <th>心跳</th>
+                            <th>分配帳號</th>
+                        </tr>
+                    </thead>
+                    <tbody id="workersTableBody">
+                        <tr>
+                            <td colspan="7" style="text-align: center; color: var(--text-muted);">等待 Slave 註冊連線...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section C: Test Results -->
+        <div class="card" style="margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2>📊 即時測試結果 (Live Test Metrics)</h2>
+                <div id="reportActions" class="reports-actions" style="display: none;">
+                    <a id="btnDownloadHtml" class="btn-secondary" style="text-decoration: none; padding: 6px 12px; font-size: 0.85rem;" target="_blank">📥 下載 HTML 報告</a>
+                    <a id="btnDownloadCsv" class="btn-secondary" style="text-decoration: none; padding: 6px 12px; font-size: 0.85rem;" target="_blank">📥 下載 CSV 數據</a>
+                </div>
+            </div>
+
+            <div class="grid-cards">
+                <div class="card" style="padding: 12px;">
+                    <div class="card-label">總請求數</div>
+                    <div id="metricTotalReqs" class="card-value" style="font-size: 1.5rem;">0</div>
+                </div>
+                <div class="card" style="padding: 12px;">
+                    <div class="card-label">即時 RPS</div>
+                    <div id="metricRps" class="card-value" style="font-size: 1.5rem; color: var(--success);">0</div>
+                </div>
+                <div class="card" style="padding: 12px;">
+                    <div class="card-label">平均 / P95 延遲</div>
+                    <div id="metricLatency" class="card-value" style="font-size: 1.5rem; color: var(--warning);">0 / 0 ms</div>
+                </div>
+                <div class="card" style="padding: 12px;">
+                    <div class="card-label">失敗請求 (錯誤率)</div>
+                    <div id="metricErrors" class="card-value" style="font-size: 1.5rem; color: var(--danger);">0 (0%)</div>
+                </div>
+                <div class="card" style="padding: 12px;">
+                    <div class="card-label">活躍 VU / Socket 連線</div>
+                    <div id="metricActiveConns" class="card-value" style="font-size: 1.5rem; color: var(--running);">0 / 0</div>
+                </div>
+            </div>
+
+            <!-- Live Charts -->
+            <div class="charts-grid">
+                <div class="chart-box">
+                    <canvas id="liveRpsChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <canvas id="liveLatencyChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Test History -->
+        <div class="card">
+            <h2>📜 歷史測試紀錄 (Test History)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Test ID</th>
+                        <th>受測網址</th>
+                        <th>模式</th>
+                        <th>試卷</th>
+                        <th>總請求</th>
+                        <th>平均 RPS</th>
+                        <th>狀態</th>
+                        <th>時間</th>
+                        <th>報表下載</th>
+                    </tr>
+                </thead>
+                <tbody id="testHistoryBody">
+                    <tr><td colspan="9" style="text-align: center; color: var(--text-muted);">暫無歷史紀錄</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Load Test Report - test-unit-01</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 20px; background: #f8fafc; color: #1e293b; }
+        .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        h1 { margin-top: 0; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .card { background: #f1f5f9; padding: 16px; border-radius: 6px; border-left: 4px solid #3b82f6; }
+        .card-label { font-size: 0.85rem; color: #64748b; margin-bottom: 4px; }
+        .card-value { font-size: 1.5rem; font-weight: bold; color: #0f172a; }
+        .chart-container { position: relative; height: 320px; margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f8fafc; font-weight: 600; color: #475569; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; background: #e2e8f0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 分散式 API 壓力測試報告</h1>
+        <p><strong>Test ID:</strong> test-unit-01 | <strong>模式:</strong> <span class="tag">pure</span> | <strong>目標 API:</strong> http://127.0.0.1:3001 | <strong>試卷:</strong> exam1</p>
+        <p><strong>期間:</strong> 2026-10-25 20:14:16 ~ 2026-10-25 20:14:16 (0.0 秒)</p>
+
+        <div class="grid">
+            <div class="card">
+                <div class="card-label">總請求數 (Total Requests)</div>
+                <div class="card-value">250</div>
+            </div>
+            <div class="card" style="border-left-color: #10b981;">
+                <div class="card-label">平均 RPS / 峰值 RPS</div>
+                <div class="card-value">250000.0 / 250000.0</div>
+            </div>
+            <div class="card" style="border-left-color: #6366f1;">
+                <div class="card-label">平均延遲 (Avg Latency)</div>
+                <div class="card-value">26.14 ms</div>
+            </div>
+            <div class="card" style="border-left-color: #8b5cf6;">
+                <div class="card-label">P50 / P95 / P99 延遲</div>
+                <div class="card-value">25.0 / 38.5 / 39.7 ms</div>
+            </div>
+            <div class="card" style="border-left-color: #ef4444;">
+                <div class="card-label">失敗請求 / 錯誤率</div>
+                <div class="card-value">5 (2.0%)</div>
+            </div>
+            <div class="card" style="border-left-color: #f59e0b;">
+                <div class="card-label">參與 Worker 數</div>
+                <div class="card-value">2</div>
+            </div>
+        </div>
+
+        <h2>📈 效能趨勢圖表</h2>
+        <div class="chart-container">
+            <canvas id="rpsChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="latencyChart"></canvas>
+        </div>
+
+        <h2>💻 各 Worker 統計</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Worker ID</th>
+                    <th>總請求數</th>
+                    <th>失敗請求數</th>
+                    <th>活躍 VU</th>
+                    <th>Socket.IO 連線</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+            <tr>
+                <td>w1</td>
+                <td>100</td>
+                <td>2</td>
+                <td>5</td>
+                <td>5</td>
+            </tr>
+            
+            <tr>
+                <td>w2</td>
+                <td>150</td>
+                <td>3</td>
+                <td>5</td>
+                <td>5</td>
+            </tr>
+            
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const timeLabels = [0.0];
+        
+        // RPS & VU Chart
+        new Chart(document.getElementById('rpsChart'), {
+            type: 'line',
+            data: {
+                labels: timeLabels,
+                datasets: [
+                    {
+                        label: 'Requests Per Second (RPS)',
+                        data: [250000.0],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Active Virtual Users',
+                        data: [10],
+                        borderColor: '#6366f1',
+                        borderDash: [5, 5],
+                        fill: false,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { title: { display: true, text: '測試經過時間 (秒)' } },
+                    y: { title: { display: true, text: 'RPS' }, beginAtZero: true },
+                    y1: { position: 'right', title: { display: true, text: 'VUs' }, grid: { drawOnChartArea: false }, beginAtZero: true }
+                }
+            }
+        });
+
+        // Latency & Socket.IO Chart
+        new Chart(document.getElementById('latencyChart'), {
+            type: 'line',
+            data: {
+                labels: timeLabels,
+                datasets: [
+                    {
+                        label: 'P95 Latency (ms)',
+                        data: [38.5],
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        fill: true,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Socket.IO Connections',
+                        data: [10],
+                        borderColor: '#06b6d4',
+                        borderDash: [4, 4],
+                        fill: false,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { title: { display: true, text: '測試經過時間 (秒)' } },
+                    y: { title: { display: true, text: 'P95 Latency (ms)' }, beginAtZero: true },
+                    y1: { position: 'right', title: { display: true, text: 'Socket.IO 連線數' }, grid: { drawOnChartArea: false }, beginAtZero: true }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+        
